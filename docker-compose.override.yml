@@ -1,0 +1,7 @@
+services:
+  weatherforecast.sender:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+  weatherforecast.receiver:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development

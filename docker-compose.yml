@@ -1,0 +1,72 @@
+services:
+#Apps
+  weatherforecast.sender:
+    image: ${DOCKER_REGISTRY-}weatherforecast.sender
+    container_name: weatherforecast.sender
+    build:
+      context: .
+      dockerfile: WeatherForecastAPI.Sender/Dockerfile
+    ports:
+    - 8080:8080
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__Port=5672
+    depends_on:
+     rabbitmq:
+      condition: service_healthy
+
+  weatherforecast.receiver:
+    image: ${DOCKER_REGISTRY-}weatherforecast.receiver
+    container_name: weatherforecast.receiver
+    build:
+      context: .
+      dockerfile: WeatherForecastAPI.Receiver/Dockerfile
+    ports:
+    - 8081:8080
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Db=Server=postgres;Port=5432;Database=WeatherForecast;Username=postgres;Password=admin
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__Port=5672
+    depends_on:
+     rabbitmq:
+      condition: service_healthy
+     postgres:
+      condition: service_healthy
+
+ #Services
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "15672:15672"  # management console
+      - "5672:5672"    # messaging port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+     test: ["CMD", "rabbitmqctl", "ping"]
+     interval: 10s
+     timeout: 5s
+     retries: 5
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: WeatherForecast
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+     test: ["CMD-SHELL", "pg_isready -U postgres"]
+     interval: 10s
+     timeout: 5s
+     retries: 5
+
+volumes:
+  rabbitmq_data:
+  postgres_data:
